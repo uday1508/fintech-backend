@@ -8,6 +8,12 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.config import settings
 from app.db.base import Base
+from app.accounts import models as account_models
+from app.auth import models as auth_models
+from app.merchants import models as merchant_models
+from app.users import models as user_models
+
+_registered_model_modules = (account_models, auth_models, merchant_models, user_models)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

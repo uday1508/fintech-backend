@@ -13,23 +13,27 @@ from app.core.config import settings
 from app.db.base import Base
 from app.db.session import get_db_session
 from app.main import app
+from app.scripts.seed_data import seed_categories, seed_identity
 
 
 @pytest_asyncio.fixture
 async def test_engine():
     test_url = make_url(settings.test_database_url)
     app_url = make_url(settings.database_url)
-    if (
-        test_url.host == app_url.host
-        and test_url.port == app_url.port
-        and test_url.database == app_url.database
-    ):
-        raise RuntimeError("Tests must use a separate TEST_DATABASE_URL")
+    if not test_url.database or test_url.database == app_url.database:
+        raise RuntimeError(
+            "TEST_DATABASE_URL must point to a database with a different name."
+        )
 
     engine = create_async_engine(settings.test_database_url, pool_pre_ping=True)
     try:
         async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.drop_all)
             await connection.run_sync(Base.metadata.create_all)
+        session_factory = async_sessionmaker(engine, expire_on_commit=False)
+        async with session_factory.begin() as session:
+            await seed_identity(session)
+            await seed_categories(session)
         yield engine
     finally:
         await engine.dispose()
